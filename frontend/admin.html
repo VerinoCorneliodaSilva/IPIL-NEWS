@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin — IPIL News Portal</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .abas { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .aba {
+            padding: 0.55rem 1.2rem;
+            border: 2px solid #E0E0E0;
+            border-radius: 8px;
+            background: #FFFFFF;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .aba--ativa { background: #FF5722; border-color: #FF5722; color: #FFFFFF; }
+        .painel { display: none; }
+        .painel--ativo { display: block; }
+        .secao-titulo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #FF5722;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .codigo-usado { opacity: 0.5; text-decoration: line-through; }
+    </style>
+</head>
+<body>
+
+<!-- CABEÇALHO -->
+<header class="cabecalho">
+    <div class="cabecalho__inner">
+        <a href="index.html" class="logo">
+            <div class="logo__icone">IP</div>
+            <span>IPIL News</span>
+        </a>
+        <nav class="nav">
+            <a href="index.html" class="nav__link">📰 Feed</a>
+            <a href="admin.html" class="nav__link nav__link--ativo">⚙️ Admin</a>
+            <a href="#" class="nav__link nav__link--sair" id="btnSair">Sair</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+
+    <div class="banner" style="margin-bottom:1.5rem;">
+        <h1>Painel de Administração</h1>
+        <p>Gerir notícias e códigos de validação do IPIL.</p>
+    </div>
+
+    <!-- ABAS -->
+    <div class="abas">
+        <button class="aba aba--ativa" data-aba="noticias">📰 Notícias</button>
+        <button class="aba" data-aba="codigos">🔑 Códigos de Validação</button>
+    </div>
+
+    <!-- ====================================================
+         PAINEL: NOTÍCIAS
+         ==================================================== -->
+    <div id="painel-noticias" class="painel painel--ativo">
+        <div class="secao-titulo">
+            Notícias Publicadas
+            <button class="btn btn--primario" id="btnNovaNoticia">+ Nova Notícia</button>
+        </div>
+
+        <div id="alertaNoticias" class="alerta"></div>
+
+        <div class="tabela-wrapper">
+            <table class="tabela" id="tabelaNoticias">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Data</th>
+                        <th>Acções</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabelaNoticias">
+                    <tr><td colspan="5" style="text-align:center;padding:2rem;color:#757575;">A carregar…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ====================================================
+         PAINEL: CÓDIGOS DE VALIDAÇÃO
+         ==================================================== -->
+    <div id="painel-codigos" class="painel">
+        <div class="secao-titulo">
+            Códigos de Validação IPIL
+            <span style="font-size:0.85rem;font-weight:400;color:#757575;">
+                Crie um código para cada novo membro antes do registo.
+            </span>
+        </div>
+
+        <div id="alertaCodigos" class="alerta"></div>
+
+        <!-- Formulário de criação -->
+        <div style="background:#FFFFFF;border-radius:8px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:#424242;">Criar Novo Código</h3>
+            <form id="formCodigo" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;">
+                <div class="campo" style="flex:1;min-width:180px;margin-bottom:0;">
+                    <label for="novoCodigo">Número de Matrícula / Código</label>
+                    <input type="text" id="novoCodigo" placeholder="Ex: 20240005 ou F-2024-010" required>
+                </div>
+                <div class="campo" style="flex:1;min-width:160px;margin-bottom:0;">
+                    <label for="novoRole">Tipo de Utilizador</label>
+                    <select id="novoRole" required>
+                        <option value="" disabled selected>Seleccione</option>
+                        <option value="aluno">Aluno</option>
+                        <option value="professor">Professor</option>
+                        <option value="diretor">Diretor</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn--secundario" style="align-self:flex-end;">
+                    Criar Código
+                </button>
+            </form>
+        </div>
+
+        <!-- Tabela de códigos -->
+        <div class="tabela-wrapper">
+            <table class="tabela">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Role</th>
+                        <th>Estado</th>
+                        <th>Utilizado por</th>
+                        <th>Criado em</th>
+                        <th>Acções</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabelaCodigos">
+                    <tr><td colspan="6" style="text-align:center;padding:2rem;color:#757575;">A carregar…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<!-- ====================================================
+     MODAL: CRIAR / EDITAR NOTÍCIA
+     ==================================================== -->
+<div class="modal-overlay" id="modalNoticia" role="dialog" aria-modal="true">
+    <div class="modal">
+        <div class="modal__cabecalho">
+            <h2 class="modal__titulo" id="modalNoticiaTitle">Nova Notícia</h2>
+            <button class="modal__fechar" id="fecharModalNoticia">&times;</button>
+        </div>
+
+        <div id="alertaModal" class="alerta"></div>
+
+        <form id="formNoticia">
+            <input type="hidden" id="noticiaId" value="">
+
+            <div class="campo">
+                <label for="titulo">Título</label>
+                <input type="text" id="titulo" placeholder="Título da notícia" required>
+            </div>
+
+            <div class="campo">
+                <label for="imagemUrl">URL da Imagem (opcional)</label>
+                <input type="url" id="imagemUrl" placeholder="https://…/imagem.jpg">
+            </div>
+
+            <div class="campo">
+                <label for="corpo">Conteúdo da Notícia</label>
+                <textarea id="corpo" placeholder="Escreva o conteúdo completo da notícia aqui…" required></textarea>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button type="button" class="btn btn--outline" id="cancelarNoticia">Cancelar</button>
+                <button type="submit" class="btn btn--primario" id="btnSalvarNoticia">Publicar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<footer class="rodape">
+    <p>© <span id="ano"></span> <span>Instituto Politécnico Industrial de Luanda — IPIL</span></p>
+</footer>
+
+<script src="../assets/js/main.js"></script>
+<script>
+    // ============================================================
+    // Painel Admin — JavaScript puro
+    // ============================================================
+
+    const user = verificarAutenticacao();
+
+    // Verificar se é admin
+    if (user.role !== 'admin') {
+        alert('Acesso negado. Esta área é exclusiva para administradores.');
+        window.location.href = 'index.html';
+    }
+
+    document.getElementById('ano').textContent = new Date().getFullYear();
+    document.getElementById('btnSair').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await logout();
+    });
+
+    /* ---- Navegação por Abas ---- */
+    document.querySelectorAll('.aba').forEach(function (aba) {
+        aba.addEventListener('click', function () {
+            document.querySelectorAll('.aba').forEach(a => a.classList.remove('aba--ativa'));
+            document.querySelectorAll('.painel').forEach(p => p.classList.remove('painel--ativo'));
+            this.classList.add('aba--ativa');
+            document.getElementById('painel-' + this.dataset.aba).classList.add('painel--ativo');
+        });
+    });
+
+    /* ============================================================
+       TABELA DE NOTÍCIAS
+       ============================================================ */
+    async function carregarTabelaNoticias() {
+        try {
+            const res  = await fetch('../backend/news.php?acao=listar&pagina=1&limite=50');
+            const json = await res.json();
+            const tbody = document.getElementById('corpoTabelaNoticias');
+
+            if (!json.sucesso || json.dados.noticias.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#757575;">Nenhuma notícia publicada.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = json.dados.noticias.map(function (n) {
+                const data = new Date(n.criado_em).toLocaleDateString('pt-PT');
+                return `
+                    <tr>
+                        <td>${n.id}</td>
+                        <td>${escaparHTML(n.titulo)}</td>
+                        <td>${escaparHTML(n.autor)}</td>
+                        <td>${data}</td>
+                        <td>
+                            <div style="display:flex;gap:0.4rem;">
+                                <button class="btn btn--secundario" style="padding:0.3rem 0.7rem;font-size:0.8rem;"
+                                    onclick="abrirEditar(${n.id}, '${escaparAttr(n.titulo)}', '${escaparAttr(n.resumo)}', '${escaparAttr(n.imagem_url || '')}')">
+                                    Editar
+                                </button>
+                                <button class="btn btn--perigo" style="padding:0.3rem 0.7rem;font-size:0.8rem;"
+                                    onclick="apagarNoticia(${n.id})">
+                                    Apagar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            console.error('Erro ao carregar notícias:', err);
+        }
+    }
+
+    /* ---- Modal: Nova Notícia ---- */
+    document.getElementById('btnNovaNoticia').addEventListener('click', function () {
+        document.getElementById('noticiaId').value = '';
+        document.getElementById('titulo').value    = '';
+        document.getElementById('imagemUrl').value = '';
+        document.getElementById('corpo').value     = '';
+        document.getElementById('modalNoticiaTitle').textContent = 'Nova Notícia';
+        document.getElementById('btnSalvarNoticia').textContent  = 'Publicar';
+        document.getElementById('alertaModal').className = 'alerta';
+        abrirModal('modalNoticia');
+    });
+
+    /* ---- Modal: Editar Notícia ---- */
+    function abrirEditar(id, titulo, corpo, imagemUrl) {
+        document.getElementById('noticiaId').value  = id;
+        document.getElementById('titulo').value     = titulo;
+        document.getElementById('imagemUrl').value  = imagemUrl;
+        document.getElementById('corpo').value      = corpo;
+        document.getElementById('modalNoticiaTitle').textContent = 'Editar Notícia';
+        document.getElementById('btnSalvarNoticia').textContent  = 'Guardar';
+        document.getElementById('alertaModal').className = 'alerta';
+        abrirModal('modalNoticia');
+    }
+
+    /* ---- Salvar Notícia (criar ou editar) ---- */
+    document.getElementById('formNoticia').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const id       = document.getElementById('noticiaId').value;
+        const titulo   = document.getElementById('titulo').value.trim();
+        const corpo    = document.getElementById('corpo').value.trim();
+        const imagemUrl= document.getElementById('imagemUrl').value.trim();
+        const alertaEl = document.getElementById('alertaModal');
+
+        if (!titulo || !corpo) {
+            alertaEl.className = 'alerta alerta--erro alerta--visivel';
+            alertaEl.textContent = 'Preencha o título e o conteúdo.';
+            return;
+        }
+
+        const dados = new FormData();
+        dados.append('acao',       id ? 'editar' : 'criar');
+        dados.append('titulo',     titulo);
+        dados.append('corpo',      corpo);
+        dados.append('imagem_url', imagemUrl);
+        if (id) dados.append('id', id);
+
+        try {
+            const res  = await fetch('../backend/news.php', { method: 'POST', body: dados });
+            const json = await res.json();
+
+            if (json.sucesso) {
+                alertaEl.className = 'alerta alerta--sucesso alerta--visivel';
+                alertaEl.textContent = json.mensagem;
+                setTimeout(function () {
+                    fecharModal('modalNoticia');
+                    carregarTabelaNoticias();
+                }, 1000);
+            } else {
+                alertaEl.className = 'alerta alerta--erro alerta--visivel';
+                alertaEl.textContent = json.mensagem;
+            }
+        } catch (err) {
+            alertaEl.className = 'alerta alerta--erro alerta--visivel';
+            alertaEl.textContent = 'Erro de rede. Tente novamente.';
+        }
+    });
+
+    /* ---- Apagar Notícia ---- */
+    async function apagarNoticia(id) {
+        if (!confirm('Tem a certeza que deseja apagar esta notícia? Esta acção é irreversível.')) return;
+
+        const dados = new FormData();
+        dados.append('acao', 'apagar');
+        dados.append('id',   id);
+
+        try {
+            const res  = await fetch('../backend/news.php', { method: 'POST', body: dados });
+            const json = await res.json();
+            if (json.sucesso) {
+                carregarTabelaNoticias();
+            } else {
+                alert(json.mensagem);
+            }
+        } catch (err) {
+            alert('Erro de rede.');
+        }
+    }
+
+    /* ---- Fechar modais ---- */
+    document.getElementById('fecharModalNoticia').addEventListener('click', () => fecharModal('modalNoticia'));
+    document.getElementById('cancelarNoticia').addEventListener('click',    () => fecharModal('modalNoticia'));
+    document.getElementById('modalNoticia').addEventListener('click', function (e) {
+        if (e.target === this) fecharModal('modalNoticia');
+    });
+
+    /* ============================================================
+       TABELA DE CÓDIGOS DE VALIDAÇÃO
+       ============================================================ */
+    async function carregarCodigos() {
+        try {
+            const res  = await fetch('../backend/validation.php?acao=listar');
+            const json = await res.json();
+            const tbody = document.getElementById('corpoTabelaCodigos');
+
+            if (!json.sucesso || json.dados.codigos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#757575;">Nenhum código criado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = json.dados.codigos.map(function (c) {
+                const data  = new Date(c.criado_em).toLocaleDateString('pt-PT');
+                const badge = `<span class="badge badge--${c.role}">${c.role}</span>`;
+                const estado = c.usado
+                    ? '<span style="color:#43A047;font-weight:700;">✔ Usado</span>'
+                    : '<span style="color:#E53935;font-weight:700;">⏳ Disponível</span>';
+
+                return `
+                    <tr class="${c.usado ? 'codigo-usado' : ''}">
+                        <td><code>${escaparHTML(c.codigo)}</code></td>
+                        <td>${badge}</td>
+                        <td>${estado}</td>
+                        <td>${escaparHTML(c.utilizado_por || '—')}</td>
+                        <td>${data}</td>
+                        <td>
+                            ${!c.usado ? `<button class="btn btn--perigo" style="padding:0.3rem 0.7rem;font-size:0.8rem;"
+                                onclick="apagarCodigo(${c.id})">Apagar</button>` : '—'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            console.error('Erro ao carregar códigos:', err);
+        }
+    }
+
+    /* ---- Criar Código ---- */
+    document.getElementById('formCodigo').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const codigo = document.getElementById('novoCodigo').value.trim();
+        const role   = document.getElementById('novoRole').value;
+        const alertaEl = document.getElementById('alertaCodigos');
+
+        const dados = new FormData();
+        dados.append('acao',   'criar');
+        dados.append('codigo', codigo);
+        dados.append('role',   role);
+
+        try {
+            const res  = await fetch('../backend/validation.php', { method: 'POST', body: dados });
+            const json = await res.json();
+
+            alertaEl.className = `alerta alerta--${json.sucesso ? 'sucesso' : 'erro'} alerta--visivel`;
+            alertaEl.textContent = json.mensagem;
+
+            if (json.sucesso) {
+                document.getElementById('novoCodigo').value = '';
+                document.getElementById('novoRole').value   = '';
+                carregarCodigos();
+                setTimeout(() => { alertaEl.className = 'alerta'; }, 4000);
+            }
+        } catch (err) {
+            alertaEl.className = 'alerta alerta--erro alerta--visivel';
+            alertaEl.textContent = 'Erro de rede.';
+        }
+    });
+
+    /* ---- Apagar Código ---- */
+    async function apagarCodigo(id) {
+        if (!confirm('Apagar este código? Só é possível apagar códigos não utilizados.')) return;
+
+        const dados = new FormData();
+        dados.append('acao', 'apagar');
+        dados.append('id',   id);
+
+        try {
+            const res  = await fetch('../backend/validation.php', { method: 'POST', body: dados });
+            const json = await res.json();
+            if (json.sucesso) {
+                carregarCodigos();
+            } else {
+                alert(json.mensagem);
+            }
+        } catch (err) {
+            alert('Erro de rede.');
+        }
+    }
+
+    /* ---- Utilitários ---- */
+    function escaparHTML(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(str ?? '')));
+        return div.innerHTML;
+    }
+
+    function escaparAttr(str) {
+        return String(str ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function abrirModal(id) {
+        document.getElementById(id).classList.add('modal-overlay--visivel');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function fecharModal(id) {
+        document.getElementById(id).classList.remove('modal-overlay--visivel');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') fecharModal('modalNoticia');
+    });
+
+    /* ---- Iniciar ---- */
+    carregarTabelaNoticias();
+    carregarCodigos();
+</script>
+
+</body>
+</html>

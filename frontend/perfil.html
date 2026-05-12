@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil — IPIL News Portal</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .perfil-card {
+            background: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .perfil-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF5722, #FFC107);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #FFFFFF;
+            margin: 0 auto 1.25rem;
+        }
+        .perfil-nome {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+        .perfil-role {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .info-linha {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #E0E0E0;
+            font-size: 0.9rem;
+        }
+        .info-linha:last-child { border-bottom: none; }
+        .info-label { color: #757575; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<header class="cabecalho">
+    <div class="cabecalho__inner">
+        <a href="index.html" class="logo">
+            <div class="logo__icone">IP</div>
+            <span>IPIL News</span>
+        </a>
+        <nav class="nav">
+            <a href="index.html" class="nav__link">📰 Feed</a>
+            <a href="perfil.html" class="nav__link nav__link--ativo">👤 Perfil</a>
+            <a href="#" class="nav__link nav__link--sair" id="btnSair">Sair</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    <div class="perfil-card">
+        <div class="perfil-avatar" id="avatar">?</div>
+        <h1 class="perfil-nome" id="nomeUtilizador">—</h1>
+        <div class="perfil-role" id="badgeRole"></div>
+
+        <div class="info-linha">
+            <span class="info-label">Tipo de conta</span>
+            <span id="tipoRole">—</span>
+        </div>
+        <div class="info-linha">
+            <span class="info-label">Sessão activa</span>
+            <span style="color:#43A047;font-weight:700;">✔ Autenticado</span>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+            <button class="btn btn--perigo btn--bloco" id="btnLogout">Terminar Sessão</button>
+        </div>
+    </div>
+</main>
+
+<footer class="rodape">
+    <p>© <span id="ano"></span> <span>Instituto Politécnico Industrial de Luanda — IPIL</span></p>
+</footer>
+
+<script src="../assets/js/main.js"></script>
+<script>
+    const user = verificarAutenticacao();
+
+    document.getElementById('ano').textContent = new Date().getFullYear();
+
+    /* Preencher dados do perfil */
+    document.getElementById('nomeUtilizador').textContent = user.nome;
+    document.getElementById('avatar').textContent = user.nome.charAt(0).toUpperCase();
+
+    const rolesLabel = {
+        admin:     'Administrador',
+        diretor:   'Diretor',
+        professor: 'Professor',
+        aluno:     'Aluno',
+    };
+
+    document.getElementById('tipoRole').textContent = rolesLabel[user.role] || user.role;
+    document.getElementById('badgeRole').innerHTML =
+        `<span class="badge badge--${user.role}">${rolesLabel[user.role] || user.role}</span>`;
+
+    document.getElementById('btnLogout').addEventListener('click', async function () {
+        await logout();
+    });
+
+    document.getElementById('btnSair').addEventListener('click', async function (e) {
+        e.preventDefault();
+        await logout();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro — IPIL News Portal</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #FF5722 0%, #FF8A65 50%, #FFC107 100%);
+        }
+        .area-registo {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .form-card { width: 100%; max-width: 480px; }
+
+        .logo-topo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .logo-topo__circulo {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #FF5722, #FFC107);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #FFFFFF;
+            box-shadow: 0 4px 16px rgba(255,87,34,0.35);
+            margin-bottom: 0.75rem;
+        }
+        .logo-topo__nome {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #FF5722;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Mostrar/ocultar dica consoante o role */
+        #dicaCodigo { display: none; }
+    </style>
+</head>
+<body>
+
+<main class="area-registo">
+    <div class="form-card">
+
+        <div class="logo-topo">
+            <div class="logo-topo__circulo">IP</div>
+            <span class="logo-topo__nome">IPIL News Portal</span>
+        </div>
+
+        <h1 class="form-card__titulo">Criar Conta</h1>
+        <p class="form-card__subtitulo">
+            Apenas membros do IPIL podem registar-se.<br>
+            Precisa do seu número de matrícula ou código de funcionário.
+        </p>
+
+        <div id="alerta" class="alerta" role="alert"></div>
+
+        <form id="formRegistar" novalidate>
+
+            <!-- Nome completo -->
+            <div class="campo">
+                <label for="nome">Nome completo</label>
+                <input
+                    type="text"
+                    id="nome"
+                    name="nome"
+                    placeholder="Ex: Ana Maria da Silva"
+                    autocomplete="name"
+                    required
+                >
+            </div>
+
+            <!-- E-mail -->
+            <div class="campo">
+                <label for="email">E-mail</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="exemplo@ipil.ao"
+                    autocomplete="email"
+                    required
+                >
+            </div>
+
+            <!-- Tipo de utilizador -->
+            <div class="campo">
+                <label for="role">Sou…</label>
+                <select id="role" name="role" required>
+                    <option value="" disabled selected>Seleccione o seu tipo</option>
+                    <option value="aluno">Aluno</option>
+                    <option value="professor">Professor</option>
+                    <option value="diretor">Diretor</option>
+                </select>
+            </div>
+
+            <!-- Código de validação IPIL -->
+            <div class="campo">
+                <label for="codigo" id="labelCodigo">Número de Matrícula / Código de Funcionário</label>
+                <input
+                    type="text"
+                    id="codigo"
+                    name="codigo"
+                    placeholder="Ex: 20240001 ou F-2024-001"
+                    autocomplete="off"
+                    required
+                >
+                <!-- A dica muda dinamicamente consoante o role seleccionado -->
+                <p class="campo__dica" id="dicaCodigo"></p>
+            </div>
+
+            <!-- Senha -->
+            <div class="campo">
+                <label for="senha">Senha</label>
+                <input
+                    type="password"
+                    id="senha"
+                    name="senha"
+                    placeholder="Mínimo 8 caracteres"
+                    autocomplete="new-password"
+                    required
+                    minlength="8"
+                >
+                <p class="campo__dica">Use letras, números e símbolos para maior segurança.</p>
+            </div>
+
+            <!-- Confirmar senha -->
+            <div class="campo">
+                <label for="confirmarSenha">Confirmar Senha</label>
+                <input
+                    type="password"
+                    id="confirmarSenha"
+                    name="confirmarSenha"
+                    placeholder="Repita a senha"
+                    autocomplete="new-password"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn btn--primario btn--bloco" id="btnRegistar">
+                Criar Conta
+            </button>
+        </form>
+
+        <p style="text-align:center; font-size:0.9rem; color:#757575; margin-top:1.25rem;">
+            Já tem conta?
+            <a href="login.html" style="font-weight:600;">Faça login</a>
+        </p>
+
+    </div>
+</main>
+
+<script>
+    // ============================================================
+    // Cadastro — JavaScript puro
+    // ============================================================
+
+    const form        = document.getElementById('formRegistar');
+    const roleSelect  = document.getElementById('role');
+    const labelCodigo = document.getElementById('labelCodigo');
+    const dicaCodigo  = document.getElementById('dicaCodigo');
+    const alertaEl    = document.getElementById('alerta');
+    const btnReg      = document.getElementById('btnRegistar');
+
+    /* Actualizar label e dica do código conforme o role */
+    roleSelect.addEventListener('change', function () {
+        const role = this.value;
+        dicaCodigo.style.display = 'block';
+
+        const config = {
+            aluno: {
+                label: 'Número de Matrícula',
+                dica:  'Introduza o número de matrícula fornecido pela secretaria (ex: 20240001).'
+            },
+            professor: {
+                label: 'Código de Funcionário',
+                dica:  'Introduza o código de funcionário (ex: F-2024-001) fornecido pelos recursos humanos.'
+            },
+            diretor: {
+                label: 'Código de Direção',
+                dica:  'Introduza o código de direção (ex: D-2024-001) fornecido pelo departamento administrativo.'
+            }
+        };
+
+        if (config[role]) {
+            labelCodigo.textContent = config[role].label;
+            dicaCodigo.textContent  = config[role].dica;
+        }
+    });
+
+    /* Mostrar alerta */
+    function mostrarAlerta(tipo, mensagem) {
+        alertaEl.className = `alerta alerta--${tipo} alerta--visivel`;
+        alertaEl.textContent = mensagem;
+        alertaEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const nome          = document.getElementById('nome').value.trim();
+        const email         = document.getElementById('email').value.trim();
+        const role          = roleSelect.value;
+        const codigo        = document.getElementById('codigo').value.trim();
+        const senha         = document.getElementById('senha').value;
+        const confirmarSenha= document.getElementById('confirmarSenha').value;
+
+        /* Validações no cliente */
+        if (!nome || !email || !role || !codigo || !senha || !confirmarSenha) {
+            mostrarAlerta('erro', 'Preencha todos os campos obrigatórios.');
+            return;
+        }
+
+        if (senha.length < 8) {
+            mostrarAlerta('erro', 'A senha deve ter pelo menos 8 caracteres.');
+            return;
+        }
+
+        if (senha !== confirmarSenha) {
+            mostrarAlerta('erro', 'As senhas não coincidem. Verifique e tente novamente.');
+            return;
+        }
+
+        btnReg.disabled = true;
+        btnReg.textContent = 'A criar conta…';
+
+        const dados = new FormData();
+        dados.append('acao',   'registar');
+        dados.append('nome',   nome);
+        dados.append('email',  email);
+        dados.append('role',   role);
+        dados.append('codigo', codigo);
+        dados.append('senha',  senha);
+
+        try {
+            const res  = await fetch('../backend/auth.php', { method: 'POST', body: dados });
+            const json = await res.json();
+
+            if (json.sucesso) {
+                mostrarAlerta('sucesso', json.mensagem + ' A redirecionar para o login…');
+                setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+            } else {
+                mostrarAlerta('erro', json.mensagem);
+                btnReg.disabled = false;
+                btnReg.textContent = 'Criar Conta';
+            }
+        } catch (err) {
+            mostrarAlerta('erro', 'Erro de rede. Verifique a ligação e tente novamente.');
+            btnReg.disabled = false;
+            btnReg.textContent = 'Criar Conta';
+        }
+    });
+</script>
+
+</body>
+</html>

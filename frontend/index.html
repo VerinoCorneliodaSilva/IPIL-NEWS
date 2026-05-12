@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed de Notícias — IPIL News Portal</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     CABEÇALHO
+     ============================================================ -->
+<header class="cabecalho">
+    <div class="cabecalho__inner">
+
+        <!-- Logótipo -->
+        <a href="index.html" class="logo">
+            <div class="logo__icone">IP</div>
+            <span>IPIL News</span>
+        </a>
+
+        <!-- Botão hamburger (mobile) -->
+        <button
+            class="hamburger"
+            id="hamburger"
+            aria-label="Abrir menu"
+            aria-expanded="false"
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <!-- Navegação principal -->
+        <nav class="nav" id="menuNav" aria-label="Navegação principal">
+            <a href="index.html" class="nav__link nav__link--ativo">📰 Feed</a>
+            <a href="perfil.html" class="nav__link">👤 Perfil</a>
+            <a href="#" class="nav__link nav__link--admin" id="linkAdmin" style="display:none;">⚙️ Admin</a>
+            <a href="#" class="nav__link nav__link--sair" id="btnSair">Sair</a>
+        </nav>
+
+    </div>
+</header>
+
+<!-- ============================================================
+     CONTEÚDO PRINCIPAL
+     ============================================================ -->
+<main class="container">
+
+    <!-- Banner de boas-vindas -->
+    <div class="banner">
+        <h1 id="saudacao">Bem-vindo ao IPIL News Portal</h1>
+        <p>Acompanhe as últimas notícias e comunicados do Instituto Politécnico Industrial de Luanda.</p>
+    </div>
+
+    <!-- Área de notícias -->
+    <section aria-label="Feed de notícias">
+        <div id="loader" class="loader">
+            <div class="loader__spinner"></div>
+        </div>
+
+        <div id="gridNoticias" class="grid-noticias" style="display:none;"></div>
+
+        <div id="vazio" class="vazio" style="display:none;">
+            <div class="vazio__icone">📭</div>
+            <p class="vazio__texto">Ainda não há notícias publicadas.</p>
+        </div>
+
+        <!-- Paginação -->
+        <div id="paginacao" class="paginacao" style="display:none;"></div>
+    </section>
+
+</main>
+
+<!-- ============================================================
+     MODAL: Detalhe da Notícia
+     ============================================================ -->
+<div class="modal-overlay" id="modalDetalhe" role="dialog" aria-modal="true" aria-label="Detalhe da notícia">
+    <div class="modal">
+        <div class="modal__cabecalho">
+            <h2 class="modal__titulo" id="modalTitulo">Título</h2>
+            <button class="modal__fechar" id="fecharModal" aria-label="Fechar">&times;</button>
+        </div>
+        <p id="modalMeta" style="font-size:0.82rem; color:#757575; margin-bottom:1rem;"></p>
+        <img id="modalImagem" src="" alt="" style="border-radius:8px; margin-bottom:1rem; display:none;">
+        <div id="modalCorpo" style="line-height:1.7; white-space:pre-wrap;"></div>
+    </div>
+</div>
+
+<!-- ============================================================
+     RODAPÉ
+     ============================================================ -->
+<footer class="rodape">
+    <p>© <span id="ano"></span> <span>Instituto Politécnico Industrial de Luanda — IPIL</span>. Todos os direitos reservados.</p>
+</footer>
+
+<script src="../assets/js/main.js"></script>
+<script>
+    // ============================================================
+    // Feed de Notícias — JavaScript puro
+    // ============================================================
+
+    const user = verificarAutenticacao(); // definido em main.js
+
+    let paginaActual = 1;
+
+    /* Saudação personalizada */
+    document.getElementById('saudacao').textContent =
+        `Bem-vindo, ${user.nome} 👋`;
+
+    /* Mostrar link Admin se for administrador */
+    if (user.role === 'admin') {
+        const linkAdmin = document.getElementById('linkAdmin');
+        linkAdmin.style.display = '';
+        linkAdmin.href = 'admin.html';
+    }
+
+    /* Ano no rodapé */
+    document.getElementById('ano').textContent = new Date().getFullYear();
+
+    /* ---- Menu hamburger ---- */
+    const hamburger = document.getElementById('hamburger');
+    const menuNav   = document.getElementById('menuNav');
+
+    hamburger.addEventListener('click', function () {
+        const aberto = menuNav.classList.toggle('nav--aberto');
+        hamburger.setAttribute('aria-expanded', aberto);
+    });
+
+    /* ---- Logout ---- */
+    document.getElementById('btnSair').addEventListener('click', async function (e) {
+        e.preventDefault();
+        await logout(); // definido em main.js
+    });
+
+    /* ============================================================
+       CARREGAR NOTÍCIAS
+       ============================================================ */
+    async function carregarNoticias(pagina = 1) {
+        document.getElementById('loader').style.display       = 'flex';
+        document.getElementById('gridNoticias').style.display = 'none';
+        document.getElementById('vazio').style.display        = 'none';
+        document.getElementById('paginacao').style.display    = 'none';
+
+        try {
+            const res  = await fetch(`../backend/news.php?acao=listar&pagina=${pagina}`);
+            const json = await res.json();
+
+            document.getElementById('loader').style.display = 'none';
+
+            if (!json.sucesso) {
+                console.error(json.mensagem);
+                return;
+            }
+
+            const { noticias, total_paginas, pagina_actual } = json.dados;
+            paginaActual = pagina_actual;
+
+            if (noticias.length === 0) {
+                document.getElementById('vazio').style.display = 'flex';
+                return;
+            }
+
+            renderizarNoticias(noticias);
+            renderizarPaginacao(total_paginas, pagina_actual);
+
+        } catch (err) {
+            document.getElementById('loader').style.display = 'none';
+            console.error('Erro ao carregar notícias:', err);
+        }
+    }
+
+    /* ---- Renderizar cards de notícias ---- */
+    function renderizarNoticias(noticias) {
+        const grid = document.getElementById('gridNoticias');
+        grid.innerHTML = '';
+
+        noticias.forEach(function (n) {
+            const dataFormatada = new Date(n.criado_em).toLocaleDateString('pt-PT', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+
+            /* Imagem ou placeholder com inicial do título */
+            const imagemHtml = n.imagem_url
+                ? `<img class="card__imagem" src="${escaparHTML(n.imagem_url)}" alt="${escaparHTML(n.titulo)}" loading="lazy">`
+                : `<div class="card__imagem-placeholder">${escaparHTML(n.titulo.charAt(0))}</div>`;
+
+            const card = document.createElement('article');
+            card.className = 'card';
+            card.innerHTML = `
+                ${imagemHtml}
+                <div class="card__corpo">
+                    <p class="card__meta">
+                        <span>📅 ${dataFormatada}</span>
+                        <span>✍️ ${escaparHTML(n.autor)}</span>
+                    </p>
+                    <h2 class="card__titulo">${escaparHTML(n.titulo)}</h2>
+                    <p class="card__resumo">${escaparHTML(n.resumo)}…</p>
+                    <div class="card__acoes">
+                        <button
+                            class="btn btn--outline"
+                            onclick="abrirDetalhe(${n.id})"
+                        >
+                            Ler mais
+                        </button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        grid.style.display = 'grid';
+    }
+
+    /* ---- Paginação ---- */
+    function renderizarPaginacao(totalPaginas, paginaActual) {
+        if (totalPaginas <= 1) return;
+
+        const pag = document.getElementById('paginacao');
+        pag.innerHTML = '';
+
+        for (let i = 1; i <= totalPaginas; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'paginacao__btn' + (i === paginaActual ? ' paginacao__btn--ativo' : '');
+            btn.textContent = i;
+            btn.addEventListener('click', function () { carregarNoticias(i); });
+            pag.appendChild(btn);
+        }
+
+        pag.style.display = 'flex';
+    }
+
+    /* ============================================================
+       MODAL: DETALHE DA NOTÍCIA
+       ============================================================ */
+    async function abrirDetalhe(id) {
+        try {
+            const res  = await fetch(`../backend/news.php?acao=detalhe&id=${id}`);
+            const json = await res.json();
+            if (!json.sucesso) return;
+
+            const n = json.dados.noticia;
+            const dataFormatada = new Date(n.criado_em).toLocaleDateString('pt-PT', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+
+            document.getElementById('modalTitulo').textContent = n.titulo;
+            document.getElementById('modalMeta').textContent =
+                `📅 ${dataFormatada}  ✍️ ${n.autor}`;
+            document.getElementById('modalCorpo').textContent = n.corpo;
+
+            const modalImg = document.getElementById('modalImagem');
+            if (n.imagem_url) {
+                modalImg.src     = n.imagem_url;
+                modalImg.alt     = n.titulo;
+                modalImg.style.display = 'block';
+            } else {
+                modalImg.style.display = 'none';
+            }
+
+            document.getElementById('modalDetalhe').classList.add('modal-overlay--visivel');
+            document.body.style.overflow = 'hidden';
+
+        } catch (err) {
+            console.error('Erro ao carregar detalhe:', err);
+        }
+    }
+
+    function fecharModal() {
+        document.getElementById('modalDetalhe').classList.remove('modal-overlay--visivel');
+        document.body.style.overflow = '';
+    }
+
+    document.getElementById('fecharModal').addEventListener('click', fecharModal);
+    document.getElementById('modalDetalhe').addEventListener('click', function (e) {
+        if (e.target === this) fecharModal();
+    });
+
+    /* Fechar modal com tecla ESC */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') fecharModal();
+    });
+
+    /* ---- Utilitário: escapar HTML para prevenir XSS no frontend ---- */
+    function escaparHTML(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(str ?? '')));
+        return div.innerHTML;
+    }
+
+    /* ---- Iniciar ---- */
+    carregarNoticias(1);
+</script>
+
+</body>
+</html>
