@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,130 +75,141 @@
         }
     </style>
 </head>
+
 <body>
 
-<main class="area-login">
-    <div class="form-card">
+    <main class="area-login">
+        <div class="form-card">
 
-        <!-- Logótipo -->
-        <div class="logo-topo">
-            <div class="logo-topo__circulo">IP</div>
-            <span class="logo-topo__nome">IPIL News Portal</span>
+            <!-- Logótipo -->
+            <div class="logo-topo">
+                <div class="logo-topo__circulo">IP</div>
+                <span class="logo-topo__nome">IPIL News Portal</span>
+            </div>
+
+            <h1 class="form-card__titulo">Bem-vindo</h1>
+            <p class="form-card__subtitulo">Aceda à sua conta do Instituto Politécnico Industrial de Luanda</p>
+
+            <!-- Mensagens de erro/sucesso -->
+            <div id="alerta" class="alerta" role="alert"></div>
+
+            <!-- Formulário de Login -->
+            <form id="formLogin" novalidate>
+                <div class="campo">
+                    <label for="email">E-mail institucional</label>
+                    <input type="email" id="email" name="email" placeholder="exemplo@ipil.ao" autocomplete="email"
+                        required>
+                </div>
+
+                <div class="campo">
+                    <label for="senha">Senha</label>
+                    <input type="password" id="senha" name="senha" placeholder="A sua senha"
+                        autocomplete="current-password" required>
+                </div>
+
+                <button type="submit" class="btn btn--primario btn--bloco" id="btnLogin">
+                    Entrar
+                </button>
+            </form>
+
+            <div class="separador">ou</div>
+
+            <p style="text-align:center; font-size:0.9rem; color:#757575;">
+                Ainda não tem conta?
+                <a href="registar.html" style="font-weight:600;">Cadastre-se aqui</a>
+            </p>
+
         </div>
+    </main>
 
-        <h1 class="form-card__titulo">Bem-vindo</h1>
-        <p class="form-card__subtitulo">Aceda à sua conta do Instituto Politécnico Industrial de Luanda</p>
+    <script>
+        // ============================================================
+        // Login — JavaScript puro
+        // ============================================================
 
-        <!-- Mensagens de erro/sucesso -->
-        <div id="alerta" class="alerta" role="alert"></div>
+        const form = document.getElementById('formLogin');
+        const btnLogin = document.getElementById('btnLogin');
+        const alertaEl = document.getElementById('alerta');
 
-        <!-- Formulário de Login -->
-        <form id="formLogin" novalidate>
-            <div class="campo">
-                <label for="email">E-mail institucional</label>
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="exemplo@ipil.ao"
-                    autocomplete="email"
-                    required
-                >
-            </div>
-
-            <div class="campo">
-                <label for="senha">Senha</label>
-                <input
-                    type="password"
-                    id="senha"
-                    name="senha"
-                    placeholder="A sua senha"
-                    autocomplete="current-password"
-                    required
-                >
-            </div>
-
-            <button type="submit" class="btn btn--primario btn--bloco" id="btnLogin">
-                Entrar
-            </button>
-        </form>
-
-        <div class="separador">ou</div>
-
-        <p style="text-align:center; font-size:0.9rem; color:#757575;">
-            Ainda não tem conta?
-            <a href="registar.html" style="font-weight:600;">Cadastre-se aqui</a>
-        </p>
-
-    </div>
-</main>
-
-<script>
-    // ============================================================
-    // Login — JavaScript puro
-    // ============================================================
-
-    const form      = document.getElementById('formLogin');
-    const btnLogin  = document.getElementById('btnLogin');
-    const alertaEl  = document.getElementById('alerta');
-
-    /* Mostrar mensagem de alerta */
-    function mostrarAlerta(tipo, mensagem) {
-        alertaEl.className = `alerta alerta--${tipo} alerta--visivel`;
-        alertaEl.textContent = mensagem;
-    }
-
-    /* Verificar se já está logado e redirecionar */
-    (function verificarSessao() {
-        const sessao = sessionStorage.getItem('ipil_user');
-        if (sessao) {
-            window.location.href = 'index.html';
-        }
-    })();
-
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const email = document.getElementById('email').value.trim();
-        const senha = document.getElementById('senha').value;
-
-        if (!email || !senha) {
-            mostrarAlerta('erro', 'Preencha o e-mail e a senha.');
-            return;
+        function mostrarAlerta(tipo, mensagem) {
+            alertaEl.className = `alerta alerta--${tipo} alerta--visivel`;
+            alertaEl.textContent = mensagem;
         }
 
-        btnLogin.disabled = true;
-        btnLogin.textContent = 'A entrar…';
+        // sessão
+        (function verificarSessao() {
+            const sessao = sessionStorage.getItem('ipil_user');
+            if (sessao) {
+                window.location.href = 'index.html';
+            }
+        })();
 
-        const dados = new FormData();
-        dados.append('acao',  'login');
-        dados.append('email', email);
-        dados.append('senha', senha);
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        try {
-            const res  = await fetch('../backend/auth.php', { method: 'POST', body: dados });
-            const json = await res.json();
+            const email = document.getElementById('email').value.trim();
+            const senha = document.getElementById('senha').value;
 
-            if (json.sucesso) {
-                /* Guardar informações básicas no sessionStorage (nunca a senha) */
-                sessionStorage.setItem('ipil_user', JSON.stringify({
-                    nome: json.dados.nome,
-                    role: json.dados.role,
-                }));
-                mostrarAlerta('sucesso', 'Login efectuado! A redirecionar…');
-                setTimeout(() => { window.location.href = 'index.html'; }, 800);
-            } else {
-                mostrarAlerta('erro', json.mensagem);
+            if (!email || !senha) {
+                mostrarAlerta('erro', 'Preencha o e-mail e a senha.');
+                return;
+            }
+
+            btnLogin.disabled = true;
+            btnLogin.textContent = 'A entrar...';
+
+            const dados = new FormData();
+            dados.append('acao', 'login');
+            dados.append('email', email);
+            dados.append('senha', senha);
+
+            try {
+                const res = await fetch('../backend/auth.php', {
+                    method: 'POST',
+                    body: dados
+                });
+
+                // 🔥 VERIFICA SE O PHP RESPONDEU OK
+                if (!res.ok) {
+                    throw new Error('Erro HTTP: ' + res.status);
+                }
+
+                const texto = await res.text(); // primeiro texto bruto
+
+                let json;
+                try {
+                    json = JSON.parse(texto);
+                } catch (e) {
+                    console.log("Resposta inválida do PHP:", texto);
+                    throw new Error("PHP não retornou JSON válido");
+                }
+
+                if (json.sucesso) {
+                    sessionStorage.setItem('ipil_user', JSON.stringify({
+                        nome: json.dados.nome,
+                        role: json.dados.role
+                    }));
+
+                    mostrarAlerta('sucesso', 'Login efectuado!');
+
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 800);
+
+                } else {
+                    mostrarAlerta('erro', json.mensagem);
+                }
+
+            } catch (err) {
+                console.error(err);
+                mostrarAlerta('erro', 'Erro de ligação ao servidor.');
+            } finally {
                 btnLogin.disabled = false;
                 btnLogin.textContent = 'Entrar';
             }
-        } catch (err) {
-            mostrarAlerta('erro', 'Erro de rede. Verifique a ligação e tente novamente.');
-            btnLogin.disabled = false;
-            btnLogin.textContent = 'Entrar';
-        }
-    });
-</script>
+        });
+    </script>
 
 </body>
+
 </html>

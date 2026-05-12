@@ -1,110 +1,75 @@
 <?php
-/**
- * validation.php
- * Gestão de códigos de validação – apenas Admin
- * O Admin cria os códigos antes de distribuir às pessoas do IPIL.
- */
 
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . "/config.php";
 
-header('Content-Type: application/json; charset=utf-8');
+requireRole("admin");
 
-requireRole('admin');
+header("Content-Type: application/json");
 
-$acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
+$acao = $_POST['acao'] ?? '';
 
 match ($acao) {
-    'criar'  => criarCodigo(),
-    'listar' => listarCodigos(),
-    'apagar' => apagarCodigo(),
-    default  => jsonResponse(false, 'Acção inválida.')
+    "criar" => criar(),
+    "listar" => listar(),
+    "apagar" => apagar(),
+    default => jsonResponse(false, "Inválido")
 };
 
-// ============================================================
-// CRIAR CÓDIGO DE VALIDAÇÃO
-// O Admin insere o número de matrícula do aluno ou o código do
-// funcionário e define o role correspondente.
-// ============================================================
-function criarCodigo(): void {
+function criar() {
+
     $codigo = trim($_POST['codigo'] ?? '');
-    $role   = sanitizar($_POST['role'] ?? '');
+    $role = sanitizar($_POST['role'] ?? '');
 
-    if (empty($codigo) || empty($role)) {
-        jsonResponse(false, 'Código e role são obrigatórios.');
-    }
-
-    $rolesPermitidos = ['aluno', 'professor', 'diretor'];
-    if (!in_array($role, $rolesPermitidos, true)) {
-        jsonResponse(false, 'Role inválido. Use: aluno, professor ou diretor.');
+    if (!$codigo || !$role) {
+        jsonResponse(false, "Dados inválidos");
     }
 
     $pdo = getDB();
 
-    // Verificar se o código já existe (cada matrícula é única no IPIL)
-    $stmt = $pdo->prepare('SELECT id FROM validation_codes WHERE codigo = :codigo LIMIT 1');
-    $stmt->execute([':codigo' => $codigo]);
+    $stmt = $pdo->prepare("SELECT id FROM validation_codes WHERE codigo = ?");
+    $stmt->execute([$codigo]);
+
     if ($stmt->fetch()) {
-        jsonResponse(false, 'Este código já existe no sistema.');
+        jsonResponse(false, "Já existe");
     }
 
-    // Obter o ID do role
-    $stmt = $pdo->prepare('SELECT id FROM roles WHERE nome = :role LIMIT 1');
-    $stmt->execute([':role' => $role]);
-    $roleRow = $stmt->fetch();
-    if (!$roleRow) {
-        jsonResponse(false, 'Role não encontrado na base de dados.');
+    $stmt = $pdo->prepare("SELECT id FROM roles WHERE nome = ?");
+    $stmt->execute([$role]);
+    $roleId = $stmt->fetch();
+
+    if (!$roleId) {
+        jsonResponse(false, "Role inválido");
     }
 
-    // Inserir o código
-    $stmt = $pdo->prepare(
-        'INSERT INTO validation_codes (codigo, role_id) VALUES (:codigo, :role_id)'
-    );
-    $stmt->execute([':codigo' => $codigo, ':role_id' => $roleRow['id']]);
+    $pdo->prepare("
+        INSERT INTO validation_codes (codigo, role_id)
+        VALUES (?, ?)
+    ")->execute([$codigo, $roleId['id']]);
 
-    jsonResponse(true, "Código '{$codigo}' criado para o role '{$role}'.");
+    jsonResponse(true, "Criado");
 }
 
-// ============================================================
-// LISTAR TODOS OS CÓDIGOS (com estado: usado / disponível)
-// ============================================================
-function listarCodigos(): void {
-    $pdo  = getDB();
-    $stmt = $pdo->query(
-        'SELECT vc.id, vc.codigo, r.nome AS role, vc.usado, vc.criado_em,
-                u.nome AS utilizado_por
-         FROM validation_codes vc
-         INNER JOIN roles r ON r.id = vc.role_id
-         LEFT JOIN users u ON u.validation_code_id = vc.id
-         ORDER BY vc.criado_em DESC'
-    );
+function listar() {
 
-    jsonResponse(true, 'OK', ['codigos' => $stmt->fetchAll()]);
+    $pdo = getDB();
+
+    $stmt = $pdo->query("
+        SELECT vc.*, r.nome AS role
+        FROM validation_codes vc
+        JOIN roles r ON r.id = vc.role_id
+    ");
+
+    jsonResponse(true, "OK", $stmt->fetchAll());
 }
 
-// ============================================================
-// APAGAR CÓDIGO (só se ainda não foi usado)
-// ============================================================
-function apagarCodigo(): void {
+function apagar() {
+
     $id = (int)($_POST['id'] ?? 0);
-    if ($id <= 0) {
-        jsonResponse(false, 'ID inválido.');
-    }
 
-    $pdo  = getDB();
-    $stmt = $pdo->prepare('SELECT usado FROM validation_codes WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $id]);
-    $row = $stmt->fetch();
+    $pdo = getDB();
 
-    if (!$row) {
-        jsonResponse(false, 'Código não encontrado.');
-    }
+    $pdo->prepare("DELETE FROM validation_codes WHERE id = ?")
+        ->execute([$id]);
 
-    if ($row['usado']) {
-        jsonResponse(false, 'Não é possível apagar um código já utilizado.');
-    }
-
-    $stmt = $pdo->prepare('DELETE FROM validation_codes WHERE id = :id');
-    $stmt->execute([':id' => $id]);
-
-    jsonResponse(true, 'Código apagado com sucesso.');
+    jsonResponse(true, "Apagado");
 }
