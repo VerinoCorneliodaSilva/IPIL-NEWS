@@ -38,8 +38,8 @@ function login() {
         jsonResponse(false, "Utilizador não encontrado");
     }
 
-    // 🔥 SENHA SIMPLES (SEM HASH)
-    if ($senha !== $user['senha_hash']) {
+    // ✅ CORRIGIDO: Verificar senha com password_verify (compatível com password_hash do schema)
+    if (!password_verify($senha, $user['senha_hash'])) {
         jsonResponse(false, "Senha incorreta");
     }
 
@@ -48,10 +48,14 @@ function login() {
     }
 
     $_SESSION['user_id'] = $user['id'];
-    $_SESSION['nome'] = $user['nome'];
-    $_SESSION['role'] = $user['role'];
+    $_SESSION['nome']    = $user['nome'];
+    $_SESSION['role']    = $user['role'];
 
-    jsonResponse(true, "Login OK");
+    // ✅ CORRIGIDO: Retornar nome e role nos dados para o frontend guardar na sessionStorage
+    jsonResponse(true, "Login OK", [
+        "nome" => $user['nome'],
+        "role" => $user['role']
+    ]);
 }
 
 function registar() {
@@ -93,12 +97,15 @@ function registar() {
 
     $pdo->beginTransaction();
 
+    // ✅ CORRIGIDO: Guardar senha com hash seguro
+    $senhaHash = password_hash($senha, PASSWORD_BCRYPT);
+
     $stmt = $pdo->prepare("
         INSERT INTO users (nome, email, senha_hash, role_id, validation_code_id)
         VALUES (?, ?, ?, ?, ?)
     ");
 
-    $stmt->execute([$nome, $email, $senha, $vc['role_id'], $vc['id']]);
+    $stmt->execute([$nome, $email, $senhaHash, $vc['role_id'], $vc['id']]);
 
     $pdo->prepare("UPDATE validation_codes SET usado = 1 WHERE id = ?")
         ->execute([$vc['id']]);

@@ -53,13 +53,16 @@ function listar() {
 
     $pdo = getDB();
 
+    // CORRIGIDO: Incluir nome do utilizador que usou o codigo (utilizado_por)
     $stmt = $pdo->query("
-        SELECT vc.*, r.nome AS role
+        SELECT vc.*, r.nome AS role, u.nome AS utilizado_por
         FROM validation_codes vc
         JOIN roles r ON r.id = vc.role_id
+        LEFT JOIN users u ON u.validation_code_id = vc.id
     ");
 
-    jsonResponse(true, "OK", $stmt->fetchAll());
+    // CORRIGIDO: Frontend espera json.dados.codigos (array dentro de chave codigos)
+    jsonResponse(true, "OK", ["codigos" => $stmt->fetchAll()]);
 }
 
 function apagar() {
