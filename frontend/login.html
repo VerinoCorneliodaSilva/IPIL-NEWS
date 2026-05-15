@@ -94,17 +94,17 @@
             <div id="alerta" class="alerta" role="alert"></div>
 
             <!-- Formulário de Login -->
-            <form id="formLogin" novalidate>
+            <form id="formLogin" novalidate autocomplete="off">
                 <div class="campo">
                     <label for="email">E-mail institucional</label>
-                    <input type="email" id="email" name="email" placeholder="exemplo@ipil.ao" autocomplete="email"
-                        required>
+                    <input type="email" id="email" name="email" placeholder="exemplo@ipil.ao" 
+                        autocomplete="off" value="" required>
                 </div>
 
                 <div class="campo">
                     <label for="senha">Senha</label>
                     <input type="password" id="senha" name="senha" placeholder="A sua senha"
-                        autocomplete="current-password" required>
+                        autocomplete="off" value="" required>
                 </div>
 
                 <button type="submit" class="btn btn--primario btn--bloco" id="btnLogin">
@@ -126,6 +126,16 @@
         // ============================================================
         // Login — JavaScript puro
         // ============================================================
+
+        // ✅ LIMPAR CAMPOS ao carregar (remove cache do navegador)
+        window.addEventListener('load', function() {
+            document.getElementById('email').value = '';
+            document.getElementById('senha').value = '';
+            // Desabilitar autofill em todos os inputs
+            document.querySelectorAll('input[autocomplete]').forEach(input => {
+                input.autocomplete = 'new-password';
+            });
+        });
 
         const form = document.getElementById('formLogin');
         const btnLogin = document.getElementById('btnLogin');
@@ -150,6 +160,8 @@
             const email = document.getElementById('email').value.trim();
             const senha = document.getElementById('senha').value;
 
+            console.log("📤 Enviando login para:", email);
+
             if (!email || !senha) {
                 mostrarAlerta('erro', 'Preencha o e-mail e a senha.');
                 return;
@@ -164,6 +176,7 @@
             dados.append('senha', senha);
 
             try {
+                console.log("🔗 Conectando a: ../backend/auth.php");
                 const res = await fetch('../backend/auth.php', {
                     method: 'POST',
                     body: dados
@@ -175,16 +188,20 @@
                 }
 
                 const texto = await res.text(); // primeiro texto bruto
+                console.log("📥 Resposta do servidor:", texto);
 
                 let json;
                 try {
                     json = JSON.parse(texto);
                 } catch (e) {
-                    console.log("Resposta inválida do PHP:", texto);
-                    throw new Error("PHP não retornou JSON válido");
+                    console.error("❌ JSON inválido:", texto);
+                    throw new Error("PHP não retornou JSON válido: " + texto);
                 }
 
+                console.log("✅ JSON recebido:", json);
+
                 if (json.sucesso) {
+                    console.log("✓ Login bem-sucedido!");
                     sessionStorage.setItem('ipil_user', JSON.stringify({
                         nome: json.dados.nome,
                         role: json.dados.role
@@ -197,12 +214,13 @@
                     }, 800);
 
                 } else {
+                    console.error("❌ Erro do servidor:", json.mensagem);
                     mostrarAlerta('erro', json.mensagem);
                 }
 
             } catch (err) {
-                console.error(err);
-                mostrarAlerta('erro', 'Erro de ligação ao servidor.');
+                console.error("❌ Erro:", err);
+                mostrarAlerta('erro', 'Erro de ligação ao servidor: ' + err.message);
             } finally {
                 btnLogin.disabled = false;
                 btnLogin.textContent = 'Entrar';
