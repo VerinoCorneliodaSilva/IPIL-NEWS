@@ -71,7 +71,7 @@
 
         <div id="alerta" class="alerta" role="alert"></div>
 
-        <form id="formRegistar" novalidate>
+        <form id="formRegistar" novalidate autocomplete="off">
 
             <!-- Nome completo -->
             <div class="campo">
@@ -81,7 +81,8 @@
                     id="nome"
                     name="nome"
                     placeholder="Ex: Ana Maria da Silva"
-                    autocomplete="name"
+                    autocomplete="off"
+                    value=""
                     required
                 >
             </div>
@@ -94,7 +95,8 @@
                     id="email"
                     name="email"
                     placeholder="exemplo@ipil.ao"
-                    autocomplete="email"
+                    autocomplete="off"
+                    value=""
                     required
                 >
             </div>
@@ -204,11 +206,26 @@
         }
     });
 
+    // Limpar campos ao carregar
+    window.addEventListener('load', function() {
+        document.getElementById('nome').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('codigo').value = '';
+        document.getElementById('senha').value = '';
+        document.getElementById('confirmarSenha').value = '';
+    });
+
     /* Mostrar alerta */
     function mostrarAlerta(tipo, mensagem) {
         alertaEl.className = `alerta alerta--${tipo} alerta--visivel`;
         alertaEl.textContent = mensagem;
         alertaEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Validar email formato
+    function validarEmail(email) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
     }
 
     form.addEventListener('submit', async function (e) {
@@ -221,9 +238,21 @@
         const senha         = document.getElementById('senha').value;
         const confirmarSenha= document.getElementById('confirmarSenha').value;
 
+        console.log("📤 Dados de registo:", { nome, email, role, codigo });
+
         /* Validações no cliente */
         if (!nome || !email || !role || !codigo || !senha || !confirmarSenha) {
             mostrarAlerta('erro', 'Preencha todos os campos obrigatórios.');
+            return;
+        }
+
+        if (!validarEmail(email)) {
+            mostrarAlerta('erro', 'E-mail inválido. Verifique e tente novamente.');
+            return;
+        }
+
+        if (nome.length < 3) {
+            mostrarAlerta('erro', 'O nome deve ter pelo menos 3 caracteres.');
             return;
         }
 
@@ -249,19 +278,35 @@
         dados.append('senha',  senha);
 
         try {
+            console.log("🔗 Enviando para backend...");
             const res  = await fetch('../backend/auth.php', { method: 'POST', body: dados });
-            const json = await res.json();
+            
+            if (!res.ok) {
+                throw new Error('Erro HTTP: ' + res.status);
+            }
+
+            const texto = await res.text();
+            console.log("📥 Resposta:", texto);
+
+            let json;
+            try {
+                json = JSON.parse(texto);
+            } catch (e) {
+                console.error("❌ JSON inválido:", texto);
+                throw new Error("Servidor retornou resposta inválida");
+            }
 
             if (json.sucesso) {
-                mostrarAlerta('sucesso', json.mensagem + ' A redirecionar para o login…');
+                mostrarAlerta('sucesso', 'Conta criada com sucesso! A redirecionar para o login…');
                 setTimeout(() => { window.location.href = 'login.html'; }, 2000);
             } else {
-                mostrarAlerta('erro', json.mensagem);
+                mostrarAlerta('erro', json.mensagem || 'Erro desconhecido');
                 btnReg.disabled = false;
                 btnReg.textContent = 'Criar Conta';
             }
         } catch (err) {
-            mostrarAlerta('erro', 'Erro de rede. Verifique a ligação e tente novamente.');
+            console.error("❌ Erro:", err);
+            mostrarAlerta('erro', 'Erro de ligação ao servidor: ' + err.message);
             btnReg.disabled = false;
             btnReg.textContent = 'Criar Conta';
         }

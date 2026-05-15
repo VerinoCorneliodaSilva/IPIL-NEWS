@@ -91,23 +91,58 @@ function registar() {
         $codigo = trim($_POST['codigo'] ?? '');
         $role = sanitizar($_POST['role'] ?? '');
 
+        // Log de debug
+        $debug_log = [
+            "acao" => "registar",
+            "email" => $email,
+            "role" => $role,
+            "codigo" => $codigo,
+            "timestamp" => date('Y-m-d H:i:s')
+        ];
+
         if (!$nome || !$email || !$senha || !$codigo || !$role) {
+            $debug_log["erro"] = "Campos obrigatórios vazios";
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
             jsonResponse(false, "Campos obrigatórios");
+        }
+
+        // Validar email
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $debug_log["erro"] = "Email inválido";
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+            jsonResponse(false, "Email inválido");
+        }
+
+        // Validar role
+        $roles_validos = ['aluno', 'professor', 'diretor'];
+        if (!in_array($role, $roles_validos)) {
+            $debug_log["erro"] = "Role inválido: " . $role;
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+            jsonResponse(false, "Tipo de utilizador inválido");
+        }
+
+        // Validar comprimento da senha
+        if (strlen($senha) < 8) {
+            $debug_log["erro"] = "Senha muito curta";
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+            jsonResponse(false, "Senha deve ter pelo menos 8 caracteres");
         }
 
         $pdo = getDB();
 
-        // email duplicado
+        // Verificar email duplicado
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
 
         if ($stmt->fetch()) {
-            jsonResponse(false, "Email já existe");
+            $debug_log["erro"] = "Email já existe";
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+            jsonResponse(false, "Email já está registado");
         }
 
-        // validar código
+        // Validar código de validação
         $stmt = $pdo->prepare("
-            SELECT vc.id, vc.role_id
+            SELECT vc.id, vc.role_id, r.nome as role_nome
             FROM validation_codes vc
             JOIN roles r ON r.id = vc.role_id
             WHERE vc.codigo = ? AND r.nome = ? AND vc.usado = 0
@@ -117,28 +152,53 @@ function registar() {
         $vc = $stmt->fetch();
 
         if (!$vc) {
-            jsonResponse(false, "Código inválido");
+            $debug_log["erro"] = "Código de validação não encontrado ou já foi usado";
+            $debug_log["codigo_procurado"] = $codigo;
+            $debug_log["role_procurado"] = $role;
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+            jsonResponse(false, "Código de validação inválido ou já foi utilizado");
         }
 
         $pdo->beginTransaction();
 
-        // ✅ CORRIGIDO: Guardar senha com hash seguro
-        $senhaHash = password_hash($senha, PASSWORD_BCRYPT);
+        try {
+            // ✅ Hash seguro da senha
+            $senhaHash = password_hash($senha, PASSWORD_BCRYPT);
 
-        $stmt = $pdo->prepare("
-            INSERT INTO users (nome, email, senha_hash, role_id, validation_code_id)
-            VALUES (?, ?, ?, ?, ?)
-        ");
+            $stmt = $pdo->prepare("
+                INSERT INTO users (nome, email, senha_hash, role_id, validation_code_id)
+                VALUES (?, ?, ?, ?, ?)
+            ");
 
-        $stmt->execute([$nome, $email, $senhaHash, $vc['role_id'], $vc['id']]);
+            $stmt->execute([$nome, $email, $senhaHash, $vc['role_id'], $vc['id']]);
 
-        $pdo->prepare("UPDATE validation_codes SET usado = 1 WHERE id = ?")
-            ->execute([$vc['id']]);
+            // Marcar código como usado
+            $stmt2 = $pdo->prepare("UPDATE validation_codes SET usado = 1 WHERE id = ?");
+            $stmt2->execute([$vc['id']]);
 
-        $pdo->commit();
+            $pdo->commit();
 
-        jsonResponse(true, "Conta criada");
+            // Log de sucesso
+            $debug_log["sucesso"] = true;
+            $debug_log["user_id"] = $pdo->lastInsertId();
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+
+            jsonResponse(true, "Conta criada com sucesso! Pode agora fazer login.", [
+                "user_id" => $pdo->lastInsertId(),
+                "nome" => $nome,
+                "email" => $email
+            ]);
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $debug_log["erro"] = "Erro na transação: " . $e->getMessage();
+            file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
+            jsonResponse(false, "Erro ao criar conta: " . $e->getMessage());
+        }
+
     } catch (Exception $e) {
+        $debug_log["erro"] = "Erro global: " . $e->getMessage();
+        file_put_contents(__DIR__ . '/registo_debug.log', json_encode($debug_log) . "\n", FILE_APPEND);
         jsonResponse(false, "Erro no servidor: " . $e->getMessage());
     }
 }
